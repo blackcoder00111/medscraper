@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medscrape — AI Medical Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --bg2: #f7f6f3;
+  --bg3: #efede9;
+  --border: #e6e4e0;
+  --border2: #ccc9c4;
+  --text: #18180f;
+  --text2: #54534c;
+  --text3: #99978f;
+  --accent: #2d6a4f;
+  --accent-l: #e6f2ec;
+  --accent2: #1a4231;
+  --red: #b83232;
+  --red-l: #fdf0f0;
+  --blue: #1d4ed8;
+  --blue-l: #eff3ff;
+  --amber: #a16207;
+  --amber-l: #fefce8;
+  --sidebar-w: 252px;
+  --header-h: 50px;
+  --r: 5px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.13);
+}
+
+html { font-size: 15px; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow: hidden; }
+
+/* ── AUTH SCREEN ── */
+#authScreen {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+#authScreen.hidden { display: none; }
+
+.auth-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  width: 420px;
+  max-width: 95vw;
+  overflow: hidden;
+  animation: scaleIn 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+.auth-header {
+  padding: 32px 36px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.auth-logo-icon {
+  width: 34px; height: 34px;
+  background: var(--accent); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Lora', serif; font-size: 16px; font-weight: 700; color: white;
+}
+.auth-logo-text { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.auth-logo-text span { color: var(--accent); }
+.auth-title { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: var(--text); }
+.auth-subtitle { font-size: 13px; color: var(--text3); margin-top: 3px; }
+
+.auth-body { padding: 24px 36px; }
+.auth-tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 20px; }
+.auth-tab {
+  flex: 1; padding: 8px; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+  background: transparent; border: none; cursor: pointer; color: var(--text3); transition: all 0.15s;
+}
+.auth-tab.active { background: var(--accent); color: white; }
+
+.auth-panel { display: none; }
+.auth-panel.active { display: block; }
+
+.auth-footer {
+  padding: 16px 36px 28px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* ── APP SHELL ── */
+#appShell { display: none; }
+#appShell.visible { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; height: 100vh;
+  animation: slideInLeft 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.sidebar-logo { padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+.logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 14px; font-weight: 700; color: white; flex-shrink: 0; }
+.logo-text { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+.logo-text span { color: var(--accent); }
+
+.sidebar-section { padding: 8px 8px 0; }
+.sidebar-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); padding: 6px 10px 3px; }
+.s-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 10px; border-radius: var(--r);
+  cursor: pointer; font-size: 13.5px; color: var(--text2);
+  transition: background 0.12s, color 0.12s;
+}
+.s-item:hover { background: var(--bg3); color: var(--text); }
+.s-item.active { background: var(--accent-l); color: var(--accent); font-weight: 500; }
+.s-item .si { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; opacity: 0.7; }
+.s-item .badge { margin-left: auto; background: var(--accent); color: white; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 20px; }
+
+.sidebar-divider { height: 1px; background: var(--border); margin: 6px 8px; }
+
+.s-patient { padding: 4px 10px 4px 34px; font-size: 12px; color: var(--text3); cursor: pointer; border-radius: var(--r); display: flex; align-items: center; gap: 7px; transition: background 0.12s, color 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-patient:hover { background: var(--bg3); color: var(--text); }
+.s-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.s-dot.amber { background: var(--amber); }
+.s-dot.blue { background: var(--blue); }
+.s-dot.red { background: var(--red); }
+
+.sidebar-footer { margin-top: auto; padding: 10px 8px; border-top: 1px solid var(--border); }
+.user-card { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r); cursor: pointer; transition: background 0.12s; }
+.user-card:hover { background: var(--bg3); }
+.avatar { width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), #52b788); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 700; flex-shrink: 0; letter-spacing: 0.5px; }
+.user-info { flex: 1; overflow: hidden; }
+.user-name-display { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role-display { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── MAIN ── */
+.main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── TOPBAR ── */
+.topbar { height: var(--header-h); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 12px; background: var(--bg); }
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text3); }
+.breadcrumb .cur { color: var(--text); font-weight: 500; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.status-chip { display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
+.status-chip.live { background: var(--accent-l); color: var(--accent); }
+.status-chip.idle { background: var(--bg3); color: var(--text3); }
+.status-chip .sdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.status-chip.live .sdot { animation: blink 1.8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--r);
+  font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; border: none; transition: all 0.13s; white-space: nowrap;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--text2); }
+.btn-ghost:hover:not(:disabled) { background: var(--bg3); color: var(--text); }
+.btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+.btn-outline:hover:not(:disabled) { background: var(--bg3); color: var(--text); border-color: var(--text3); }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover:not(:disabled) { background: var(--accent2); }
+.btn-danger { background: var(--red-l); color: var(--red); border: 1px solid #f0c8c8; }
+.btn-danger:hover:not(:disabled) { background: #fce4e4; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-spin::after { content:''; display:inline-block; width:11px; height:11px; border:2px solid rgba(255,255,255,0.35); border-top-color:white; border-radius:50%; animation:spin 0.65s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── CONTENT ── */
+.content { flex: 1; overflow-y: auto; }
+.content::-webkit-scrollbar { width: 5px; }
+.content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── VIEW TRANSITIONS ── */
+.view { display: none; }
+.view.active { display: block; animation: viewIn 0.28s cubic-bezier(0.16,1,0.3,1); }
+@keyframes viewIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── FORM ELEMENTS ── */
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: var(--r);
+  padding: 9px 12px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+  color: var(--text); background: var(--bg); outline: none; transition: border 0.13s, box-shadow 0.13s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,0.08); }
+.form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
+.form-textarea { resize: vertical; line-height: 1.6; }
+.form-select { cursor: pointer; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ── CHAT INTERFACE ── */
+.chat-container { max-width: 800px; margin: 0 auto; height: calc(100vh - 200px); display: flex; flex-direction: column; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: var(--bg2); border-radius: var(--r); margin-bottom: 20px; }
+.message { display: flex; gap: 12px; margin-bottom: 20px; }
+.message.user { flex-direction: row-reverse; }
+.message-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.message.user .message-avatar { background: var(--blue); }
+.message-content { flex: 1; }
+.message.user .message-content { text-align: right; }
+.message-header { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.message.user .message-header { color: var(--blue); }
+.message-text { background: var(--bg); padding: 12px 16px; border-radius: var(--r); font-size: 14px; line-height: 1.5; }
+.message.user .message-text { background: var(--blue-l); color: var(--blue); }
+.chat-input { display: flex; gap: 10px; }
+.chat-input input { flex: 1; border: 1px solid var(--border); border-radius: var(--r); padding: 12px 16px; font-size: 14px; outline: none; }
+.chat-input input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,0.08); }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* ── TAGS ── */
+.tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 3px; font-size: 11.5px; font-weight: 500; }
+.tg { background: var(--accent-l); color: var(--accent); }
+.ta { background: var(--amber-l); color: var(--amber); }
+.tb { background: var(--blue-l); color: var(--blue); }
+.tr { background: var(--red-l); color: var(--red); }
+.tn { background: var(--bg3); color: var(--text3); }
+
+/* ── DASHBOARD ── */
+.pg-header { padding: 36px 48px 18px; }
+.pg-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 3px; }
+.pg-sub { font-size: 13px; color: var(--text3); }
+.pg-body { padding: 0 48px 48px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 18px; transition: box-shadow 0.18s, transform 0.18s;
+  animation: viewIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.stat-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.stat-card:nth-child(1){animation-delay:.04s} .stat-card:nth-child(2){animation-delay:.08s}
+.stat-card:nth-child(3){animation-delay:.12s} .stat-card:nth-child(4){animation-delay:.16s}
+.stat-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 8px; }
+.stat-val { font-family: 'Lora', serif; font-size: 30px; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+.stat-info { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+.stat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── TABLE ── */
+.table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+.table-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.search-field { border: 1px solid var(--border); border-radius: var(--r); padding: 7px 11px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg2); color: var(--text); outline: none; transition: border 0.13s; max-width: 200px; }
+.search-field:focus { border-color: var(--accent); }
+.search-field::placeholder { color: var(--text3); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { padding: 9px 16px; text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); background: var(--bg2); border-bottom: 1px solid var(--border); }
+td { padding: 11px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg2); cursor: pointer; }
+.pt-name { font-weight: 500; color: var(--text); }
+.pt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.pt-id { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; }
+
+/* ── SECTION TITLE ── */
+.sec-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+
+/* ── ACTIVITY FEED ── */
+.activity-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-size: 13px; animation: viewIn 0.3s ease; }
+.activity-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-l); display: flex; align-items: center; justify-content: center; }
+.activity-icon svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.activity-feed { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── COMPOSER ── */
+.composer-wrap { display: flex; height: calc(100vh - var(--header-h)); }
+.composer-left { flex: 1; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.composer-right { width: 385px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+.composer-hd { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
+.composer-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+.meta-row { display: flex; gap: 7px; flex-wrap: wrap; }
+.meta-chip { padding: 3px 10px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text2); background: var(--bg2); }
+
+.note-area { flex: 1; padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.note-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 5px; }
+.raw-textarea { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; padding: 13px 15px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.72; color: var(--text); resize: none; outline: none; min-height: 185px; transition: border 0.13s; }
+.raw-textarea:focus { border-color: var(--accent); background: var(--bg); }
+.raw-textarea::placeholder { color: var(--text3); }
+
+.type-pills { display: flex; gap: 7px; flex-wrap: wrap; }
+.type-pill { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 12.5px; color: var(--text2); cursor: pointer; transition: all 0.13s; background: var(--bg); font-family: 'DM Sans', sans-serif; }
+.type-pill:hover { border-color: var(--accent); color: var(--accent); }
+.type-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-l); font-weight: 500; }
+
+.voice-bar { display: flex; align-items: center; gap: 10px; padding: 11px 22px; border-top: 1px solid var(--border); background: var(--bg2); }
+.mic-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #f0c8c8; background: var(--red-l); color: var(--red); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s; flex-shrink: 0; }
+.mic-btn:hover { background: var(--red); color: white; }
+.mic-btn.rec { background: var(--red); color: white; border-color: var(--red); animation: micpulse 1.2s infinite; }
+@keyframes micpulse { 0%,100%{box-shadow:0 0 0 0 rgba(184,50,50,0.35)} 50%{box-shadow:0 0 0 7px rgba(184,50,50,0)} }
+.mic-btn svg { width: 14px; height: 14px; fill: currentColor; }
+.waveform { display: none; gap: 2px; align-items: center; height: 16px; }
+.waveform.on { display: flex; }
+.wb { width: 3px; border-radius: 2px; background: var(--red); }
+.wb:nth-child(1){height:5px;animation:wb 0.8s ease infinite} .wb:nth-child(2){height:11px;animation:wb 0.8s ease 0.1s infinite} .wb:nth-child(3){height:16px;animation:wb 0.8s ease 0.2s infinite} .wb:nth-child(4){height:9px;animation:wb 0.8s ease 0.15s infinite} .wb:nth-child(5){height:13px;animation:wb 0.8s ease 0.05s infinite}
+@keyframes wb { 0%,100%{transform:scaleY(0.5);opacity:0.4} 50%{transform:scaleY(1);opacity:1} }
+.voice-label { font-size: 13px; color: var(--text3); }
+.voice-time { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--red); font-weight: 500; display: none; }
+
+.ai-bar { padding: 12px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+
+/* ── AI PANEL ── */
+.panel-hd { padding: 15px 18px 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.panel-title { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; letter-spacing: 0.01em; }
+.ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: blink 2s infinite; }
+.panel-body { flex: 1; overflow-y: auto; padding: 14px 18px; }
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.soap-block { margin-bottom: 13px; animation: viewIn 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+.soap-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 5px; display: flex; align-items: center; gap: 7px; }
+.soap-lbl::after { content:''; flex:1; height:1px; background:var(--accent-l); }
+.soap-body { background: var(--bg2); border: 1px solid var(--border); border-radius: 5px; padding: 10px 13px; font-size: 13px; line-height: 1.72; color: var(--text2); }
+.soap-body p { margin-bottom: 3px; }
+.soap-body p:last-child { margin-bottom: 0; }
+.soap-body strong { color: var(--text); font-weight: 500; }
+
+.typing { display: flex; gap: 4px; align-items: center; }
+.td { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: tdb 1.2s infinite; }
+.td:nth-child(2){animation-delay:0.2s} .td:nth-child(3){animation-delay:0.4s}
+@keyframes tdb { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+.empty-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: var(--text3); font-size: 13.5px; gap: 7px; text-align: center; }
+.empty-panel svg { width: 36px; height: 36px; stroke: var(--border2); fill: none; stroke-width: 1.5; margin-bottom: 4px; }
+
+.panel-ft { padding: 11px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+
+/* ── WARD ROUND ── */
+.ward-wrap { padding: 30px 48px 48px; }
+.ward-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 18px; }
+.pt-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; cursor: pointer; transition: all 0.18s; animation: viewIn 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.pt-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); border-color: var(--accent); }
+.pt-card:nth-child(1){animation-delay:.04s} .pt-card:nth-child(2){animation-delay:.08s} .pt-card:nth-child(3){animation-delay:.12s} .pt-card:nth-child(4){animation-delay:.16s} .pt-card:nth-child(5){animation-delay:.20s}
+.pt-card-hd { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.pt-card-name { font-weight: 600; font-size: 14px; }
+.pt-card-id { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+.pt-card-body { font-size: 12.5px; color: var(--text2); line-height: 1.6; margin-bottom: 8px; }
+.pt-card-ft { display: flex; align-items: center; gap: 6px; }
+.pt-card-time { font-size: 11px; color: var(--text3); margin-left: auto; }
+
+/* ── NOTE VIEW ── */
+.note-wrap { max-width: 720px; margin: 0 auto; padding: 44px 24px 64px; }
+.note-overline { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.note-title { font-family: 'Lora', serif; font-size: 32px; font-weight: 600; letter-spacing: -0.6px; line-height: 1.2; margin-bottom: 10px; }
+.note-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.note-meta-i { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text3); }
+.note-meta-i strong { color: var(--text2); font-weight: 500; }
+.n-callout { border-left: 3px solid var(--accent); border-radius: 4px; padding: 11px 15px; font-size: 13.5px; margin: 13px 0; display: flex; gap: 9px; }
+.n-callout.green { background: var(--accent-l); border-left-color: var(--accent); }
+.n-callout.amber { background: var(--amber-l); border-left-color: var(--amber); color: var(--amber); }
+.n-callout.red { background: var(--red-l); border-left-color: var(--red); }
+.n-h2 { font-family: 'Lora', serif; font-size: 19px; font-weight: 600; margin: 26px 0 7px; letter-spacing: -0.3px; }
+.n-h3 { font-size: 14px; font-weight: 600; margin: 14px 0 5px; }
+.n-p { font-size: 15px; line-height: 1.78; margin-bottom: 4px; }
+.n-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0; }
+.n-table th { background: var(--bg3); font-weight: 600; font-size: 11.5px; color: var(--text2); padding: 9px 14px; border: 1px solid var(--border); }
+.n-table td { padding: 8px 14px; border: 1px solid var(--border); background: var(--bg); }
+
+/* ── SETTINGS ── */
+.settings-wrap { max-width: 640px; margin: 0 auto; padding: 38px 24px 60px; }
+.settings-section { margin-bottom: 30px; }
+.s-sec-title { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+.s-sec-desc { font-size: 13px; color: var(--text3); margin-bottom: 14px; }
+.settings-card { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.s-row { padding: 15px 20px; border-bottom: 1px solid var(--border); }
+.s-row:last-child { border-bottom: none; }
+.s-row-lbl { font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.s-row-desc { font-size: 12px; color: var(--text3); margin-bottom: 7px; }
+.key-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.key-badge.set { background: var(--accent-l); color: var(--accent); }
+.key-badge.unset { background: var(--bg3); color: var(--text3); }
+.key-row { display: flex; gap: 8px; }
+.mono-input { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.toggle { width: 34px; height: 18px; border-radius: 9px; background: var(--border2); cursor: pointer; position: relative; transition: background 0.18s; flex-shrink: 0; }
+.toggle.on { background: var(--accent); }
+.toggle::after { content:''; position:absolute; width:12px; height:12px; border-radius:50%; background:white; top:3px; left:3px; transition:transform 0.18s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+.toggle.on::after { transform:translateX(16px); }
+
+/* ── PROFILE MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 100; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; animation: fadeIn 0.18s ease; }
+.modal { background: var(--bg); border-radius: 10px; box-shadow: var(--shadow-lg); width: 480px; max-width: 95vw; animation: scaleIn 0.25s cubic-bezier(0.16,1,0.3,1); overflow: hidden; }
+.modal-hd { padding: 18px 22px 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; }
+.modal-x { background: none; border: none; cursor: pointer; font-size: 17px; color: var(--text3); padding: 4px; border-radius: 4px; line-height: 1; }
+.modal-x:hover { background: var(--bg3); color: var(--text); }
+.modal-body { padding: 20px 22px; }
+.modal-ft { padding: 12px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── NEW PATIENT MODAL ── */
+#newPatientModal .modal { width: 560px; }
+
+/* ── TOAST ── */
+.toast-wrap { position: fixed; bottom: 22px; right: 22px; z-index: 999; display: flex; flex-direction: column; gap: 7px; }
+.toast { display: flex; align-items: center; gap: 9px; padding: 11px 15px; border-radius: 7px; font-size: 13px; box-shadow: var(--shadow-lg); animation: toastIn 0.28s cubic-bezier(0.16,1,0.3,1); min-width: 240px; color: white; }
+.toast.s { background: var(--accent); }
+.toast.e { background: var(--red); }
+.toast.i { background: var(--blue); }
+@keyframes toastIn { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+@keyframes toastOut { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(8px)} }
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes scaleIn { from{transform:scale(0.93);opacity:0} to{transform:scale(1);opacity:1} }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── SVG ICONS (inline, no emoji) ── */
+.icon-sm { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; flex-shrink: 0; }
+
+/* ── FLOATING CHAT WIDGET ── */
+#medBuddyButton { 
+  position: fixed; bottom: 20px; right: 20px; z-index: 500;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #52b788);
+  border: none; cursor: pointer; box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  animation: buttonBounce 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+#medBuddyButton:hover { transform: scale(1.1); box-shadow: 0 12px 24px rgba(45,106,79,0.25); }
+#medBuddyButton:active { transform: scale(0.95); }
+@keyframes buttonBounce { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+#medBuddyWidget {
+  position: fixed; bottom: 80px; right: 20px; z-index: 500;
+  width: 380px; height: 520px; max-height: 80vh;
+  background: var(--bg); border-radius: 16px; box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  display: none; flex-direction: column;
+  animation: widgetSlideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+  overflow: hidden;
+}
+#medBuddyWidget.open { display: flex; }
+@keyframes widgetSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.widget-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--accent), #52b788);
+  color: white; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.widget-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.widget-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; }
+.widget-close:hover { background: rgba(255,255,255,0.3); }
+
+.widget-messages {
+  flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--bg2);
+}
+.widget-messages::-webkit-scrollbar { width: 4px; }
+.widget-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.bubble { display: flex; gap: 8px; align-items: flex-end; animation: bubbleIn 0.3s cubic-bezier(0.16,1,0.3,1); }
+.bubble.user { flex-direction: row-reverse; }
+@keyframes bubbleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.bubble-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.bubble.user .bubble-avatar { background: var(--blue); }
+
+.bubble-content { max-width: 75%; }
+.bubble-text { background: white; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+  color: var(--text); word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.bubble.user .bubble-text { background: var(--blue); color: white; margin-left: auto; }
+
+.bubble-typing { display: flex; gap: 3px; align-items: center; padding: 8px 12px; background: white;
+  border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); 
+  animation: typingBounce 1.4s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+
+.widget-input-area { padding: 14px 16px; border-top: 1px solid var(--border); background: var(--bg);
+  display: flex; gap: 8px; }
+.widget-input { flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 8px 14px;
+  font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; background: var(--bg2);
+  transition: all 0.2s; }
+.widget-input:focus { border-color: var(--accent); background: var(--bg); box-shadow: 0 0 0 3px rgba(45,106,79,0.08); }
+.widget-input::placeholder { color: var(--text3); }
+
+.widget-send { background: var(--accent); color: white; border: none; width: 32px; height: 32px;
+  border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: all 0.2s; flex-shrink: 0; }
+.widget-send:hover { background: var(--accent2); }
+.widget-send:active { transform: scale(0.9); }
+
+@media (max-width: 480px) {
+  #medBuddyWidget { width: 100%; height: 100%; bottom: 0; right: 0; border-radius: 8px; max-height: 100vh; }
+  #medBuddyButton { bottom: 24px; right: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ AUTH SCREEN ═══════════════ -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">M</div>
+        <div class="auth-logo-text">Med<span>scrape</span></div>
+      </div>
+      <div class="auth-title">Clinical Documentation AI</div>
+      <div class="auth-subtitle">Sign in or create your account to continue</div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" onclick="switchAuthTab('register')">Create Account</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="auth-panel active" id="loginPanel">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input class="form-input" id="loginUsername" placeholder="e.g. dr.jude" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <div id="loginError" style="font-size:12.5px;color:var(--red);margin-bottom:10px;display:none"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:9px" onclick="handleLogin()">Sign In</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="auth-panel" id="registerPanel">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input class="form-input" id="regFirst" placeholder="e.g. Jude">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" id="regLast" placeholder="e.g. Okonkwo">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Title / Role</label>
+            <select class="form-select" id="regTitle">
+              <option>Dr.</option><option>Prof.</option><option>Nurse</option><option>Midwife</option><option>Medical Student</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Specialty</label>
+            <input class="form-input" id="regSpecialty" placeholder="e.g. Obs & Gynae">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hospital / Institution</label>
+          <input class="form-input" id="regHospital" placeholder="e.g. Lagos Teaching Hospital">
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input class="form-input" id="regUsername" placeholder="e.g. dr.jude">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" id="regPassword" type="password" placeholder="Min. 6 characters">
+          </div>
+        </div>
+        <div id="regError" style="font-size:12.5px;color:var(--red);margin-bottom:10px;display:none"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:9px" onclick="handleRegister()">Create Account</button>
+      </div>
+    </div>
+    <div class="auth-footer">Your data stays in this browser session. Configure cloud sync in Settings.</div>
+  </div>
+</div>
+
+<!-- ═══════════════ APP SHELL ═══════════════ -->
+<div id="appShell">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">M</div>
+      <div class="logo-text">Med<span>scrape</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <div class="s-item active" onclick="navigate('dashboard',this)">
+        <svg class="si icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="s-item" onclick="navigate('composer',this)">
+        <svg class="si icon-sm" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        New Note <span class="badge">AI</span>
+      </div>
+      <div class="s-item" onclick="navigate('ward',this)">
+        <svg class="si icon-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Ward Round
+      </div>
+      <div class="s-item" onclick="navigate('note',this)">
+        <svg class="si icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        View Record
+      </div>
+      <div class="s-item" onclick="navigate('settings',this)">
+        <svg class="si icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Recent Patients</div>
+      <div class="s-patient"><span class="s-dot"></span> Eloho Anita · PPD1</div>
+      <div class="s-patient"><span class="s-dot amber"></span> Ngozi Okonkwo · Antepartum</div>
+      <div class="s-patient"><span class="s-dot blue"></span> Amaka Eze · PPD3</div>
+      <div class="s-patient"><span class="s-dot"></span> Chisom Uche · Antenatal</div>
+      <div class="s-patient"><span class="s-dot red"></span> Blessing Nwosu · Post-op</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-card" onclick="openProfile()">
+        <div class="avatar" id="sidebarAvatar">--</div>
+        <div class="user-info">
+          <div class="user-name-display" id="sidebarName">Loading…</div>
+          <div class="user-role-display" id="sidebarRole">—</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="breadcrumb">
+        <span>Medscrape</span>
+        <span style="color:var(--border2);margin:0 2px">›</span>
+        <span class="cur" id="breadCur">Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <div class="status-chip idle" id="syncChip"><div class="sdot"></div> <span id="syncLabel">Not connected</span></div>
+        <button class="btn btn-outline btn-sm" onclick="openNewPatient()">New Patient</button>
+        <button class="btn btn-primary btn-sm" onclick="navigate('composer',null)">New Note</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="view active" id="view-dashboard">
+        <div class="pg-header">
+          <div class="pg-title" id="dashGreeting">Good morning</div>
+          <div class="pg-sub" id="dashDate">—</div>
+        </div>
+        <div class="pg-body">
+          <div class="stats-row">
+            <div class="stat-card"><div class="stat-lbl">Active Patients</div><div class="stat-val">14</div><div class="stat-info"><div class="stat-dot" style="background:var(--accent)"></div>3 new this week</div></div>
+            <div class="stat-card"><div class="stat-lbl">Notes Today</div><div class="stat-val" id="dashNotes">0</div><div class="stat-info"><div class="stat-dot" style="background:var(--blue)"></div>AI-generated</div></div>
+            <div class="stat-card"><div class="stat-lbl">Pending Review</div><div class="stat-val">3</div><div class="stat-info"><div class="stat-dot" style="background:var(--amber)"></div>Awaiting sign-off</div></div>
+            <div class="stat-card"><div class="stat-lbl">Notion Synced</div><div class="stat-val" id="dashSynced">—</div><div class="stat-info"><div class="stat-dot" style="background:var(--accent)"></div><span id="dashSyncSub">Configure in Settings</span></div></div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-bar">
+              <div class="sec-title" style="margin:0">Ward Patients</div>
+              <input class="search-field" placeholder="Search patients…">
+              <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="navigate('composer',null)">Add Note</button>
+            </div>
+            <table>
+              <thead><tr><th>Patient</th><th>Hospital No.</th><th>Status</th><th>Ward</th><th>Last Note</th><th>Score</th><th></th></tr></thead>
+              <tbody>
+                <tr onclick="navigate('note',null)">
+                  <td><div class="pt-name">Eloho Anita</div><div class="pt-sub">G1P1 · PPD Day 1</div></td>
+                  <td class="pt-id">LTH-0042</td>
+                  <td><span class="tag ta">Under Review</span></td>
+                  <td>Ward 7B</td><td style="font-size:12px;color:var(--text3)">2h ago</td>
+                  <td><span class="tag tg">92%</span></td>
+                  <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();navigate('composer',null)">Note</button></td>
+                </tr>
+                <tr>
+                  <td><div class="pt-name">Ngozi Okonkwo</div><div class="pt-sub">G3P2 · 36+4 wks Antepartum</div></td>
+                  <td class="pt-id">LTH-0039</td>
+                  <td><span class="tag tr">Urgent</span></td>
+                  <td>Ward 7A</td><td style="font-size:12px;color:var(--text3)">45 min</td>
+                  <td><span class="tag ta">78%</span></td>
+                  <td><button class="btn btn-ghost btn-sm">Note</button></td>
+                </tr>
+                <tr>
+                  <td><div class="pt-name">Amaka Eze</div><div class="pt-sub">G2P1 · PPD Day 3</div></td>
+                  <td class="pt-id">LTH-0038</td>
+                  <td><span class="tag tg">Stable</span></td>
+                  <td>Ward 8B</td><td style="font-size:12px;color:var(--text3)">4h ago</td>
+                  <td><span class="tag tg">96%</span></td>
+                  <td><button class="btn btn-ghost btn-sm">Note</button></td>
+                </tr>
+                <tr>
+                  <td><div class="pt-name">Chisom Uche</div><div class="pt-sub">G1P0 · 38+2 wks Antenatal</div></td>
+                  <td class="pt-id">LTH-0041</td>
+                  <td><span class="tag tb">Monitoring</span></td>
+                  <td>Ward 7B</td><td style="font-size:12px;color:var(--text3)">1h ago</td>
+                  <td><span class="tag tg">88%</span></td>
+                  <td><button class="btn btn-ghost btn-sm">Note</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="sec-title">Recent Activity</div>
+          <div class="activity-feed" id="activityFeed">
+            <div class="activity-item">
+              <div class="activity-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+              <div style="flex:1;font-size:13px;color:var(--text2)">Configure your API keys in <strong style="color:var(--accent);cursor:pointer" onclick="navigate('settings',null)">Settings</strong> to start generating real AI notes.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── COMPOSER ── -->
+      <div class="view" id="view-composer">
+        <div class="composer-wrap">
+          <div class="composer-left">
+            <div class="composer-hd">
+              <div class="composer-title">Ward Round Note</div>
+              <div class="meta-row">
+                <div class="meta-chip" id="metaName">Select patient</div>
+                <div class="meta-chip" id="metaObs">—</div>
+                <div class="meta-chip" id="metaStatus">—</div>
+                <div class="meta-chip" id="metaWard">—</div>
+              </div>
+            </div>
+            <div class="note-area">
+              <div>
+                <div class="note-lbl">Raw Clinical Notes</div>
+                <textarea class="raw-textarea" id="rawNote" rows="9"
+                  placeholder="Type your clinical notes here…&#10;&#10;e.g. Patient is postpartum day one. Slight bleeding overnight, approximately two pads soaked. BP 120/80, pulse 82. Mild perineal pain around the episiotomy site. Temperature 36.8. Uterus well contracted, fundus at umbilicus. Baby latching well, no signs of mastitis…"></textarea>
+              </div>
+              <div>
+                <div class="note-lbl">Note Type</div>
+                <div class="type-pills">
+                  <div class="type-pill active" onclick="setType(this,'ward_round')">Ward Round</div>
+                  <div class="type-pill" onclick="setType(this,'postpartum_review')">Postpartum Review</div>
+                  <div class="type-pill" onclick="setType(this,'discharge_summary')">Discharge Summary</div>
+                  <div class="type-pill" onclick="setType(this,'antenatal')">Antenatal</div>
+                  <div class="type-pill" onclick="setType(this,'intrapartum')">Intrapartum</div>
+                  <div class="type-pill" onclick="setType(this,'gynaecology')">Gynaecology</div>
+                  <div class="type-pill" onclick="setType(this,'operative_note')">Operative Note</div>
+                </div>
+              </div>
+            </div>
+            <div class="voice-bar">
+              <button class="mic-btn" id="micBtn" onclick="toggleMic()">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+              <div class="waveform" id="waveform"><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div></div>
+              <div>
+                <div class="voice-label" id="voiceLabel">Click to dictate — Whisper API</div>
+                <div class="voice-time" id="voiceTimer">00:00</div>
+              </div>
+              <div style="margin-left:auto;font-size:11.5px;color:var(--text3);font-family:'JetBrains Mono',monospace">whisper-1</div>
+            </div>
+            <div class="ai-bar">
+              <button class="btn btn-primary" id="genBtn" onclick="generateSOAP()">Generate SOAP Note</button>
+              <button class="btn btn-outline" onclick="extractVitals()">Extract Vitals</button>
+              <button class="btn btn-ghost" onclick="clearComposer()">Clear</button>
+            </div>
+          </div>
+
+          <div class="composer-right">
+            <div class="panel-hd">
+              <div class="panel-title"><div class="ai-dot"></div> AI Output</div>
+              <button class="btn btn-ghost btn-sm" onclick="copyOutput()">Copy</button>
+            </div>
+            <div class="panel-body" id="aiOutput">
+              <div class="empty-panel">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <div style="font-weight:500;color:var(--text2)">AI Ready</div>
+                <div>Enter clinical notes and click<br><strong>Generate SOAP Note</strong></div>
+              </div>
+            </div>
+            <div class="panel-ft">
+              <button class="btn btn-outline" style="flex:1" id="saveBtn" onclick="saveToNotion()" disabled>Save to Notion</button>
+              <button class="btn btn-primary" style="flex:1" id="syncBtn" onclick="saveToNotion()" disabled>Sync</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WARD ROUND ── -->
+      <div class="view" id="view-ward">
+        <div class="ward-wrap">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between">
+            <div><div class="pg-title">Ward Round</div><div class="pg-sub" id="wardSub">Ward 7B · 5 patients</div></div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-outline btn-sm">Export Round</button>
+              <button class="btn btn-primary btn-sm" onclick="navigate('composer',null)">Add Patient</button>
+            </div>
+          </div>
+          <div class="ward-grid">
+            <div class="pt-card" onclick="navigate('note',null)">
+              <div class="pt-card-hd"><div><div class="pt-card-name">Eloho Anita</div><div class="pt-card-id">LTH-0042</div></div><span class="tag ta">Review</span></div>
+              <div class="pt-card-body">G1P1 · PPD Day 1 · Slight overnight bleeding. BP 120/80. Episiotomy intact. Baby latching well.</div>
+              <div class="pt-card-ft"><span class="tag tg">SOAP Done</span><span class="pt-card-time">2h ago</span></div>
+            </div>
+            <div class="pt-card">
+              <div class="pt-card-hd"><div><div class="pt-card-name">Ngozi Okonkwo</div><div class="pt-card-id">LTH-0039</div></div><span class="tag tr">Urgent</span></div>
+              <div class="pt-card-body">G3P2 · 36+4 wks Antepartum · BP 150/95. On hydralazine. CTG reactive. Awaiting senior review.</div>
+              <div class="pt-card-ft"><span class="tag ta">Pending Note</span><span class="pt-card-time">45 min</span></div>
+            </div>
+            <div class="pt-card">
+              <div class="pt-card-hd"><div><div class="pt-card-name">Amaka Eze</div><div class="pt-card-id">LTH-0038</div></div><span class="tag tg">Stable</span></div>
+              <div class="pt-card-body">G2P1 · PPD Day 3 · Breastfeeding established. Planned discharge tomorrow.</div>
+              <div class="pt-card-ft"><span class="tag tg">SOAP Done</span><span class="pt-card-time">4h ago</span></div>
+            </div>
+            <div class="pt-card">
+              <div class="pt-card-hd"><div><div class="pt-card-name">Chisom Uche</div><div class="pt-card-id">LTH-0041</div></div><span class="tag tb">Monitor</span></div>
+              <div class="pt-card-body">G1P0 · 38+2 wks Antenatal · Reduced fetal movements. AFI 8 cm. CTG normal.</div>
+              <div class="pt-card-ft"><span class="tag tg">SOAP Done</span><span class="pt-card-time">1h ago</span></div>
+            </div>
+            <div class="pt-card" onclick="navigate('composer',null)" style="border-style:dashed;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text3);min-height:130px;">
+              <svg style="width:22px;height:22px;stroke:var(--border2);fill:none;stroke-width:1.5;stroke-linecap:round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <div style="font-size:13px;font-weight:500">Add patient note</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NOTE VIEW ── -->
+      <div class="view" id="view-note">
+        <div class="note-wrap">
+          <div class="note-overline">Ward Round Note · Ward 7B</div>
+          <div class="note-title">Eloho Anita — Postpartum Day 1</div>
+          <div class="note-meta">
+            <div class="note-meta-i"><strong>12 May 2025, 08:32</strong></div>
+            <div class="note-meta-i">G1P1 · <strong>PPD Day 1</strong></div>
+            <div class="note-meta-i">LTH-0042</div>
+            <div class="note-meta-i"><strong id="noteAuthor">Dr. —</strong></div>
+            <div style="margin-left:auto"><span class="tag tg">Synced to Notion</span></div>
+          </div>
+          <div class="n-callout amber">
+            <div>Clinical Flag — Overnight blood loss: approximately 2 pads soaked. Monitor lochia closely. Reassess in 4 hours.</div>
+          </div>
+          <div class="n-h2">Subjective</div>
+          <div class="n-p">26-year-old primigravida, postpartum day 1 following normal vaginal delivery. Reports slight bleeding overnight (~2 pads soaked). Mild perineal pain at episiotomy site. Baby latching and feeding every 2–3 hours. No headache or visual disturbances.</div>
+          <div class="n-h2">Objective</div>
+          <table class="n-table">
+            <thead><tr><th>Parameter</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Blood Pressure</td><td>120/80 mmHg</td><td><span class="tag tg">Normal</span></td></tr>
+              <tr><td>Pulse</td><td>82 bpm</td><td><span class="tag tg">Normal</span></td></tr>
+              <tr><td>Temperature</td><td>36.8 °C</td><td><span class="tag tg">Afebrile</span></td></tr>
+              <tr><td>Lochia</td><td>Rubra</td><td><span class="tag tg">Expected D1</span></td></tr>
+              <tr><td>Uterus</td><td>Well contracted, at umbilicus</td><td><span class="tag tg">Normal</span></td></tr>
+            </tbody>
+          </table>
+          <div class="n-h2">Assessment</div>
+          <div class="n-p">PPD Day 1 — recovering well. Increased lochia likely from episiotomy ooze; uterus well contracted, does not meet PPH criteria. Vitals stable throughout.</div>
+          <div class="n-callout green"><div>AI Confidence: 92% — No red flags for secondary PPH at this stage.</div></div>
+          <div class="n-h2">Plan</div>
+          <div class="n-p">1. Monitor lochia — repeat pad count in 4 hours.</div>
+          <div class="n-p">2. Oral iron supplementation. Analgesics PRN (paracetamol, ibuprofen).</div>
+          <div class="n-p">3. Episiotomy sitz bath care. Breastfeeding support as required.</div>
+          <div class="n-p">4. Discharge Day 2 if stable — 6-week postnatal follow-up. Counsel on danger signs.</div>
+          <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="navigate('composer',null)">Add Follow-up Note</button>
+            <button class="btn btn-outline btn-sm">Export PDF</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:auto">Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div class="view" id="view-settings">
+        <div class="settings-wrap">
+          <div class="pg-title" style="margin-bottom:3px">Settings</div>
+          <div class="pg-sub" style="margin-bottom:28px">API integrations and configuration</div>
+
+          <div class="settings-section">
+            <div class="s-sec-title">Voice Dictation — Whisper</div>
+            <div class="s-sec-desc">Transcribes audio using OpenAI Whisper.</div>
+            <div class="settings-card">
+              <div class="s-row">
+                <div class="s-row-lbl">Enable voice dictation <div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+                <div class="s-row-desc">Records audio in-browser via Web Audio API, transcribes with Whisper.</div>
+              </div>
+              <div class="s-row">
+                <div class="s-row-lbl" style="margin-bottom:5px">Language</div>
+                <select class="form-select"><option selected>English</option><option>Yoruba (auto-detect)</option><option>Igbo (auto-detect)</option><option>Hausa (auto-detect)</option></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="s-sec-title">Notion</div>
+            <div class="s-sec-desc">Saves notes to your Notion databases. Get your token at notion.so/my-integrations</div>
+            <div class="settings-card">
+              <div class="s-row">
+                <div class="s-row-lbl">Integration Token <span class="key-badge unset" id="notionStatus">Not set</span></div>
+                <div class="s-row-desc">Create an internal integration, then share your databases with it.</div>
+                <div class="key-row">
+                  <input class="form-input mono-input" type="password" id="notionToken" placeholder="secret_…">
+                  <button class="btn btn-primary btn-sm" onclick="saveKey('notion')">Save</button>
+                </div>
+              </div>
+              <div class="s-row">
+                <div class="s-row-lbl" style="margin-bottom:5px">Patient Notes Database ID</div>
+                <input class="form-input mono-input" id="notionPatientDb" placeholder="32-character database ID from URL">
+              </div>
+              <div class="s-row">
+                <div class="s-row-lbl" style="margin-bottom:5px">Ward Round Database ID</div>
+                <input class="form-input mono-input" id="notionWardDb" placeholder="32-character database ID from URL">
+              </div>
+              <div class="s-row">
+                <div class="s-row-lbl">Test connection <button class="btn btn-outline btn-sm" onclick="testNotion()">Test now</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="s-sec-title">Notion Field Mapping</div>
+            <div class="s-sec-desc">Map to your exact Notion property names (case-sensitive).</div>
+            <div class="settings-card">
+              <div class="s-row">
+                <div class="s-row-lbl" style="margin-bottom:10px">Property Names</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Patient Name</div><input class="form-input" id="fPatientName" value="Patient Name"></div>
+                  <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Hospital Number</div><input class="form-input" id="fHospitalNo" value="Hospital Number"></div>
+                  <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Note Type</div><input class="form-input" id="fNoteType" value="Note Type"></div>
+                  <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Ward</div><input class="form-input" id="fWard" value="Ward"></div>
+                  <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Status</div><input class="form-input" id="fStatus" value="Status"></div>
+                  <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Clinician</div><input class="form-input" id="fClinician" value="Clinician"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="saveAllSettings()">Save All Settings</button>
+          <button class="btn btn-danger" style="width:100%;justify-content:center;padding:10px;margin-top:8px" onclick="handleLogout()">Sign Out</button>
+        </div>
+      </div>
+
+
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /appShell -->
+
+<!-- ── PROFILE MODAL ── -->
+<div class="modal-overlay" id="profileModal" onclick="closeMod(event,'profileModal')">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">Edit Profile</div>
+      <button class="modal-x" onclick="closeMod(null,'profileModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-2">
+        <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="profFirst"></div>
+        <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" id="profLast"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Title / Role</label>
+          <select class="form-select" id="profTitle">
+            <option>Dr.</option><option>Prof.</option><option>Nurse</option><option>Midwife</option><option>Medical Student</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Specialty</label><input class="form-input" id="profSpecialty" placeholder="e.g. Obs & Gynae"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Hospital / Institution</label><input class="form-input" id="profHospital" placeholder="e.g. Lagos Teaching Hospital"></div>
+      <div class="form-group"><label class="form-label">Ward / Unit</label><input class="form-input" id="profWard" placeholder="e.g. Ward 7B"></div>
+      <div class="form-row-2">
+        <div class="form-group"><label class="form-label">New Password</label><input class="form-input" type="password" id="profPassword" placeholder="Leave blank to keep current"></div>
+        <div class="form-group"><label class="form-label">Confirm Password</label><input class="form-input" type="password" id="profPasswordConf" placeholder="Confirm new password"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeMod(null,'profileModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── NEW PATIENT MODAL ── -->
+<div class="modal-overlay" id="newPatientModal" onclick="closeMod(event,'newPatientModal')">
+  <div class="modal" style="width:560px">
+    <div class="modal-hd">
+      <div class="modal-title">New Patient Record</div>
+      <button class="modal-x" onclick="closeMod(null,'newPatientModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-2">
+        <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="npFirst" placeholder="e.g. Eloho"></div>
+        <div class="form-group"><label class="form-label">Surname</label><input class="form-input" id="npLast" placeholder="e.g. Anita"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label class="form-label">Hospital Number</label><input class="form-input" id="npHospNo" placeholder="LTH-XXXX"></div>
+        <div class="form-group"><label class="form-label">Age</label><input class="form-input" type="number" id="npAge" placeholder="26" min="1" max="120"></div>
+        <div class="form-group"><label class="form-label">Date of Admission</label><input class="form-input" type="date" id="npAdmDate"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Obstetric History</label>
+          <input class="form-input" id="npObstetric" placeholder="e.g. G2P1+0, G3P2, Nulliparous, G1P0+1…">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Enter gravida/parity freely, e.g. G2P1, G3P2+1</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ward / Unit</label>
+          <input class="form-input" id="npWard" placeholder="e.g. Ward 7B, Labour Ward, Theatre 2">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Type the ward name or number</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Clinical Status</label>
+        <select class="form-select" id="npStatus">
+          <optgroup label="Antenatal">
+            <option>Routine Antenatal Care</option>
+            <option>High-Risk Antenatal</option>
+            <option>Antepartum Haemorrhage</option>
+            <option>Pre-eclampsia / Hypertensive Disorder</option>
+            <option>Gestational Diabetes</option>
+            <option>Preterm Labour</option>
+            <option>Preterm Premature Rupture of Membranes (PPROM)</option>
+            <option>Premature Rupture of Membranes (PROM)</option>
+            <option>Intrauterine Growth Restriction (IUGR)</option>
+            <option>Reduced Fetal Movements</option>
+            <option>Placenta Praevia</option>
+            <option>Placental Abruption</option>
+            <option>Multiple Pregnancy</option>
+            <option>Anaemia in Pregnancy</option>
+            <option>Hyperemesis Gravidarum</option>
+            <option>Threatened Miscarriage</option>
+            <option>Ectopic Pregnancy — Suspected</option>
+            <option>Molar Pregnancy</option>
+            <option>Cervical Incompetence</option>
+            <option>Cholestasis of Pregnancy</option>
+            <option>Cardiac Disease in Pregnancy</option>
+            <option>HIV in Pregnancy</option>
+            <option>Sickle Cell Disease in Pregnancy</option>
+            <option>Diabetes in Pregnancy (Pre-existing)</option>
+          </optgroup>
+          <optgroup label="Intrapartum">
+            <option>Active Labour — Early Phase</option>
+            <option>Active Labour — Active Phase</option>
+            <option>Active Labour — Second Stage</option>
+            <option>Augmented Labour (Syntocinon)</option>
+            <option>Induced Labour</option>
+            <option>Prolonged Labour</option>
+            <option>Obstructed Labour</option>
+            <option>Fetal Distress</option>
+            <option>Cord Prolapse</option>
+            <option>Shoulder Dystocia</option>
+            <option>Postpartum Haemorrhage (PPH)</option>
+            <option>Uterine Rupture — Suspected</option>
+            <option>Failed Trial of Labour</option>
+          </optgroup>
+          <optgroup label="Postpartum — Vaginal Delivery">
+            <option selected>Postpartum Day 1 — Normal Vaginal Delivery</option>
+            <option>Postpartum Day 2 — Normal Vaginal Delivery</option>
+            <option>Postpartum Day 3 — Normal Vaginal Delivery</option>
+            <option>Postpartum Day 4+ — Normal Vaginal Delivery</option>
+            <option>Postpartum — Instrumental Delivery (Forceps/Ventouse)</option>
+          </optgroup>
+          <optgroup label="Postpartum — Caesarean Section">
+            <option>Postpartum Day 1 — Elective CS</option>
+            <option>Postpartum Day 2 — Elective CS</option>
+            <option>Postpartum Day 3 — Elective CS</option>
+            <option>Postpartum Day 4+ — Elective CS</option>
+            <option>Postpartum Day 1 — Emergency CS</option>
+            <option>Postpartum Day 2 — Emergency CS</option>
+            <option>Postpartum Day 3 — Emergency CS</option>
+            <option>Postpartum Day 4+ — Emergency CS</option>
+          </optgroup>
+          <optgroup label="Postpartum Complications">
+            <option>Secondary Postpartum Haemorrhage</option>
+            <option>Wound Infection — CS</option>
+            <option>Wound Dehiscence — CS</option>
+            <option>Perineal Wound Infection</option>
+            <option>Perineal Wound Dehiscence</option>
+            <option>Postpartum Sepsis</option>
+            <option>Postpartum Endometritis</option>
+            <option>Postpartum Pre-eclampsia</option>
+            <option>Deep Vein Thrombosis (DVT) — Postpartum</option>
+            <option>Pulmonary Embolism — Postpartum</option>
+            <option>Mastitis</option>
+            <option>Breast Abscess</option>
+            <option>Postpartum Depression — Screening</option>
+            <option>Postpartum Psychosis</option>
+            <option>Urinary Retention — Postpartum</option>
+            <option>Ileus — Post CS</option>
+          </optgroup>
+          <optgroup label="Miscarriage / Pregnancy Loss">
+            <option>Complete Miscarriage</option>
+            <option>Incomplete Miscarriage</option>
+            <option>Missed Miscarriage</option>
+            <option>Septic Miscarriage</option>
+            <option>Ectopic Pregnancy — Confirmed (Conservative)</option>
+            <option>Ectopic Pregnancy — Surgical</option>
+            <option>Ectopic Pregnancy — Medical (Methotrexate)</option>
+            <option>Stillbirth — Bereavement Care</option>
+            <option>Intrauterine Fetal Death (IUFD)</option>
+          </optgroup>
+          <optgroup label="Gynaecology — Outpatient / Elective">
+            <option>Routine Gynaecology Review</option>
+            <option>Menorrhagia / Heavy Menstrual Bleeding</option>
+            <option>Dysmenorrhoea</option>
+            <option>Polycystic Ovarian Syndrome (PCOS)</option>
+            <option>Endometriosis</option>
+            <option>Uterine Fibroids</option>
+            <option>Pelvic Inflammatory Disease (PID)</option>
+            <option>Vulvovaginal Candidiasis</option>
+            <option>Bacterial Vaginosis</option>
+            <option>Sexually Transmitted Infection (STI) Screening</option>
+            <option>Cervical Screening / Colposcopy</option>
+            <option>Infertility — Initial Assessment</option>
+            <option>Infertility — Assisted Reproduction</option>
+            <option>Contraception Counselling</option>
+            <option>Menopause Management</option>
+            <option>Premature Ovarian Insufficiency</option>
+            <option>Amenorrhoea — Investigation</option>
+            <option>Abnormal Uterine Bleeding</option>
+            <option>Postmenopausal Bleeding</option>
+          </optgroup>
+          <optgroup label="Gynaecology — Acute / Emergency">
+            <option>Acute Pelvic Pain</option>
+            <option>Ovarian Cyst — Torsion Suspected</option>
+            <option>Ruptured Ovarian Cyst</option>
+            <option>Haemoperitoneum</option>
+            <option>Bartholin Cyst / Abscess</option>
+            <option>Vaginal Bleeding — Not Pregnant</option>
+          </optgroup>
+          <optgroup label="Oncology">
+            <option>Cervical Cancer — Assessment / Staging</option>
+            <option>Endometrial Cancer — Assessment / Staging</option>
+            <option>Ovarian Cancer — Assessment / Staging</option>
+            <option>Vulval Cancer</option>
+            <option>Gestational Trophoblastic Disease</option>
+            <option>Post-chemotherapy Review</option>
+            <option>Post-radiotherapy Review</option>
+            <option>Palliative Care</option>
+          </optgroup>
+          <optgroup label="Operative / Post-operative">
+            <option>Pre-operative Assessment</option>
+            <option>Post-operative Day 1 — Abdominal</option>
+            <option>Post-operative Day 2 — Abdominal</option>
+            <option>Post-operative Day 3+ — Abdominal</option>
+            <option>Post-operative — Laparoscopy</option>
+            <option>Post-operative — Hysteroscopy</option>
+            <option>Post-operative — Hysterectomy</option>
+            <option>Post-operative — Myomectomy</option>
+            <option>Post-operative — Oophorectomy</option>
+            <option>Post-operative — Fistula Repair</option>
+          </optgroup>
+          <optgroup label="Discharge / Follow-up">
+            <option>Ready for Discharge</option>
+            <option>Discharge — Awaiting Transport</option>
+            <option>Postnatal Follow-up (6 weeks)</option>
+            <option>Gynaecology Outpatient Follow-up</option>
+            <option>Against Medical Advice (AMA)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Clinical Notes (optional)</label>
+        <textarea class="form-input form-textarea" id="npNotes" rows="3" placeholder="Brief summary or initial presenting complaint…"></textarea>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeMod(null,'newPatientModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createPatient()">Create Record</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ═════════════════════════════════════════════════
+// STATE
+// ═════════════════════════════════════════════════
+const S = {
+  user: null,
+  notionToken: '', notionPatientDb: '', notionWardDb: '', openaiModel: 'gpt-4o',
+  noteType: 'ward_round', currentSOAP: null, notesCount: 0,
+  recording: false, mediaRecorder: null, audioChunks: [], timerInterval: null, timerSecs: 0,
+};
+
+function getUsers() { try { return JSON.parse(sessionStorage.getItem('ms_users') || '{}'); } catch { return {}; } }
+function saveUsers(u) { sessionStorage.setItem('ms_users', JSON.stringify(u)); }
+function getCurrentUser() { try { return JSON.parse(sessionStorage.getItem('ms_session') || 'null'); } catch { return null; } }
+function setCurrentUser(u) { sessionStorage.setItem('ms_session', JSON.stringify(u)); }
+function clearSession() { sessionStorage.removeItem('ms_session'); }
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => { t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')); });
+  document.getElementById('loginPanel').classList.toggle('active', tab==='login');
+  document.getElementById('registerPanel').classList.toggle('active', tab==='register');
+}
+
+function handleLogin() {
+  const un = document.getElementById('loginUsername').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (!un || !pw) { err.textContent='Please fill in both fields.'; err.style.display='block'; return; }
+  const users = getUsers();
+  const u = users[un.toLowerCase()];
+  if (!u || u.password !== btoa(pw)) { err.textContent='Incorrect username or password.'; err.style.display='block'; return; }
+  setCurrentUser(u);
+  bootApp(u);
+}
+
+function handleRegister() {
+  const first = document.getElementById('regFirst').value.trim();
+  const last = document.getElementById('regLast').value.trim();
+  const title = document.getElementById('regTitle').value;
+  const specialty = document.getElementById('regSpecialty').value.trim();
+  const hospital = document.getElementById('regHospital').value.trim();
+  const un = document.getElementById('regUsername').value.trim().toLowerCase();
+  const pw = document.getElementById('regPassword').value;
+  const err = document.getElementById('regError');
+  err.style.display = 'none';
+  if (!first||!last||!un||!pw) { err.textContent='Please fill in all required fields.'; err.style.display='block'; return; }
+  if (pw.length < 6) { err.textContent='Password must be at least 6 characters.'; err.style.display='block'; return; }
+  const users = getUsers();
+  if (users[un]) { err.textContent='Username already taken. Choose another.'; err.style.display='block'; return; }
+  const u = { username:un, firstName:first, lastName:last, title, specialty, hospital, ward:'', password:btoa(pw) };
+  users[un] = u;
+  saveUsers(users);
+  setCurrentUser(u);
+  bootApp(u);
+}
+
+function handleLogout() {
+  clearSession();
+  location.reload();
+}
+
+function bootApp(u) {
+  S.user = u;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.add('visible');
+  updateUserDisplay(u);
+  setDates();
+  loadApiKeys();
+  prefillProfile(u);
+}
+
+function updateUserDisplay(u) {
+  const initials = ((u.firstName||'')[0]||(u.username||'')[0]||'?').toUpperCase() + ((u.lastName||'')[0]||'').toUpperCase();
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('sidebarName').textContent = `${u.title||''} ${u.firstName} ${u.lastName}`.trim() || u.username;
+  document.getElementById('sidebarRole').textContent = [u.specialty, u.hospital].filter(Boolean).join(' · ') || '—';
+  const noteAuthor = document.getElementById('noteAuthor');
+  if (noteAuthor) noteAuthor.textContent = `${u.title||'Dr.'} ${u.lastName||u.username}`;
+  const greet = document.getElementById('dashGreeting');
+  if (greet) {
+    const h = new Date().getHours();
+    const tod = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+    greet.textContent = `Good ${tod}, ${u.title||'Dr.'} ${u.lastName||u.firstName||u.username}`;
+  }
+}
+
+function openProfile() { prefillProfile(S.user); document.getElementById('profileModal').classList.add('open'); }
+
+function prefillProfile(u) {
+  if (!u) return;
+  document.getElementById('profFirst').value = u.firstName||'';
+  document.getElementById('profLast').value = u.lastName||'';
+  document.getElementById('profTitle').value = u.title||'Dr.';
+  document.getElementById('profSpecialty').value = u.specialty||'';
+  document.getElementById('profHospital').value = u.hospital||'';
+  document.getElementById('profWard').value = u.ward||'';
+  document.getElementById('profPassword').value = '';
+  document.getElementById('profPasswordConf').value = '';
+}
+
+function saveProfile() {
+  const first = document.getElementById('profFirst').value.trim();
+  const last = document.getElementById('profLast').value.trim();
+  const title = document.getElementById('profTitle').value;
+  const specialty = document.getElementById('profSpecialty').value.trim();
+  const hospital = document.getElementById('profHospital').value.trim();
+  const ward = document.getElementById('profWard').value.trim();
+  const pw = document.getElementById('profPassword').value;
+  const pwc = document.getElementById('profPasswordConf').value;
+  if (!first||!last) { toast('First and last name are required.','e'); return; }
+  if (pw && pw !== pwc) { toast('Passwords do not match.','e'); return; }
+  if (pw && pw.length < 6) { toast('Password must be at least 6 characters.','e'); return; }
+  const updated = { ...S.user, firstName:first, lastName:last, title, specialty, hospital, ward };
+  if (pw) updated.password = btoa(pw);
+  S.user = updated;
+  const users = getUsers();
+  users[updated.username] = updated;
+  saveUsers(users);
+  setCurrentUser(updated);
+  updateUserDisplay(updated);
+  closeMod(null,'profileModal');
+  toast('Profile updated successfully.','s');
+}
+
+const BM = { dashboard:'Dashboard', composer:'New Note', ward:'Ward Round', note:'Patient Record', settings:'Settings' };
+function navigate(v, el) {
+  if (!v) return;
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.s-item').forEach(x=>x.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('breadCur').textContent = BM[v]||v;
+}
+
+function setDates() {
+  const now = new Date();
+  const d = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const sub = S.user?.hospital ? `${d} · ${S.user.hospital}` : d;
+  document.getElementById('dashDate').textContent = sub;
+  document.getElementById('wardSub').textContent = `${S.user?.ward||'Ward 7B'} · 5 patients`;
+  const da = document.getElementById('npAdmDate');
+  if (da) da.value = now.toISOString().slice(0,10);
+}
+
+function loadApiKeys() {
+  const prefix = 'ms_api_' + (S.user?.username||'');
+  ['notionToken','notionPatientDb','notionWardDb','openaiModel'].forEach(k => {
+    const v = sessionStorage.getItem(prefix+k);
+    if (v) S[k] = v;
+  });
+  refreshKeyUI();
+  updateSyncChip();
+}
+
+function saveApiKeys() {
+  const prefix = 'ms_api_' + (S.user?.username||'');
+  ['notionToken','notionPatientDb','notionWardDb','openaiModel'].forEach(k => {
+    sessionStorage.setItem(prefix+k, S[k]);
+  });
+}
+
+function saveKey(which) {
+  if (which==='notion') {
+    const t = document.getElementById('notionToken').value.trim();
+    if (t && !t.startsWith('secret_') && !t.startsWith('ntn_')) { toast('Notion token should start with secret_ or ntn_','e'); return; }
+    S.notionToken = t;
+    S.notionPatientDb = document.getElementById('notionPatientDb').value.trim();
+    S.notionWardDb = document.getElementById('notionWardDb').value.trim();
+  }
+  saveApiKeys();
+  refreshKeyUI();
+  updateSyncChip();
+  toast('Saved','s',2000);
+}
+
+function saveAllSettings() { saveKey('notion'); toast('All settings saved','s'); }
+
+function refreshKeyUI() {
+  const ns = document.getElementById('notionStatus');
+  if (ns) { ns.textContent=S.notionToken?'Connected':'Not set'; ns.className='key-badge '+(S.notionToken?'set':'unset'); }
+  if (S.notionToken && document.getElementById('notionToken')) document.getElementById('notionToken').value=S.notionToken;
+  if (S.notionPatientDb && document.getElementById('notionPatientDb')) document.getElementById('notionPatientDb').value=S.notionPatientDb;
+  if (S.notionWardDb && document.getElementById('notionWardDb')) document.getElementById('notionWardDb').value=S.notionWardDb;
+}
+
+function updateSyncChip() {
+  const chip = document.getElementById('syncChip');
+  const lbl = document.getElementById('syncLabel');
+  if (S.openaiKey && S.notionToken) { chip.className='status-chip live'; lbl.textContent='OpenAI + Notion live'; }
+  else if (S.openaiKey) { chip.className='status-chip live'; lbl.textContent='OpenAI connected'; }
+  else { chip.className='status-chip idle'; lbl.textContent='Not connected'; }
+}
+
+async function testNotion() {
+  if (!S.notionToken) { toast('Enter your Notion token first','e'); return; }
+  toast('Testing Notion…','i');
+  try {
+    const r = await fetch('https://api.notion.com/v1/users/me',{headers:{Authorization:`Bearer ${S.notionToken}`,'Notion-Version':'2022-06-28'}});
+    if (r.ok) { const d=await r.json(); toast(`Notion connected as ${d.name||'user'}`, 's'); }
+    else { const d=await r.json(); toast('Notion error: '+d.message,'e',5000); }
+  } catch { toast('Connection failed','e'); }
+}
+
+function setType(el,t) { document.querySelectorAll('.type-pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); S.noteType=t; }
+
+async function toggleMic() {
+  S.recording ? stopRec() : await startRec();
+}
+
+async function startRec() {
+  if (!S.openaiKey) { toast('Add your OpenAI key in Settings first','e'); navigate('settings',null); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    S.audioChunks = [];
+    S.mediaRecorder = new MediaRecorder(stream,{mimeType:'audio/webm'});
+    S.mediaRecorder.ondataavailable = e => { if(e.data.size>0) S.audioChunks.push(e.data); };
+    S.mediaRecorder.start(250);
+    S.recording = true;
+    document.getElementById('micBtn').classList.add('rec');
+    document.getElementById('waveform').classList.add('on');
+    document.getElementById('voiceLabel').textContent = 'Recording — speak your notes';
+    document.getElementById('voiceTimer').style.display = 'block';
+    S.timerSecs=0;
+    S.timerInterval = setInterval(()=>{
+      S.timerSecs++;
+      const m=String(Math.floor(S.timerSecs/60)).padStart(2,'0'), s=String(S.timerSecs%60).padStart(2,'0');
+      document.getElementById('voiceTimer').textContent=`${m}:${s}`;
+    },1000);
+  } catch { toast('Microphone access denied','e'); }
+}
+
+function stopRec() {
+  clearInterval(S.timerInterval);
+  S.mediaRecorder.stop();
+  S.mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+  S.recording=false;
+  document.getElementById('micBtn').classList.remove('rec');
+  document.getElementById('waveform').classList.remove('on');
+  document.getElementById('voiceTimer').style.display='none';
+  document.getElementById('voiceLabel').textContent='Transcribing with Whisper…';
+  S.mediaRecorder.onstop = async () => {
+    const blob = new Blob(S.audioChunks,{type:'audio/webm'});
+    await transcribeAudio(blob);
+  };
+}
+
+async function transcribeAudio(blob) {
+  try {
+    const fd = new FormData();
+    fd.append('file', blob, 'recording.webm');
+    fd.append('model','whisper-1');
+    fd.append('language','en');
+    const r = await fetch('/api/transcribe',{method:'POST',body:fd});
+    if (!r.ok) { const d=await r.json(); throw new Error(d.error||'Whisper error'); }
+    const d = await r.json();
+    const ta = document.getElementById('rawNote');
+    ta.value = (ta.value?ta.value+'\n\n':'')+d.text;
+    document.getElementById('voiceLabel').textContent='Transcript added successfully';
+    toast('Voice note transcribed','s');
+  } catch(e) { document.getElementById('voiceLabel').textContent='Transcription failed'; toast('Whisper error: '+e.message,'e'); }
+}
+
+const NTL = { ward_round:'Ward Round Note', postpartum_review:'Postpartum Review', discharge_summary:'Discharge Summary', antenatal:'Antenatal Note', intrapartum:'Intrapartum Note', gynaecology:'Gynaecology Note', operative_note:'Operative Note' };
+
+async function generateSOAP() {
+  const raw = document.getElementById('rawNote').value.trim();
+  if (!raw) { toast('Please enter clinical notes first','e'); return; }
+  const output = document.getElementById('aiOutput');
+  const btn = document.getElementById('genBtn');
+  btn.disabled=true; btn.classList.add('btn-spin'); btn.textContent='';
+  output.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:var(--text2)"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>Generating ${NTL[S.noteType]||'SOAP note'}…</div>`;
+  try {
+    const r = await fetch('/api/generate-soap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rawNote:raw,noteType:S.noteType,model:S.openaiModel||'gpt-4o'})});
+    if (!r.ok) { const d=await r.json(); throw new Error(d.error||`API error ${r.status}`); }
+    const soap = await r.json();
+    S.currentSOAP = soap;
+    renderSOAP(soap);
+    S.notesCount++;
+    document.getElementById('dashNotes').textContent = S.notesCount;
+    addActivity(`SOAP generated — ${NTL[S.noteType]}`);
+  } catch(e) {
+    output.innerHTML=`<div class="empty-panel"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="color:var(--red);font-weight:500">Generation failed</div><div style="font-size:12px;color:var(--text3)">${e.message}</div></div>`;
+    toast('Generation failed: '+e.message,'e',6000);
+  } finally {
+    btn.disabled=false; btn.classList.remove('btn-spin'); btn.textContent='Generate SOAP Note';
+  }
+}
+
+function renderSOAP(soap) {
+  const out = document.getElementById('aiOutput');
+  out.innerHTML='';
+  [['Subjective','subjective'],['Objective','objective'],['Assessment','assessment'],['Plan','plan']].forEach(([l,k],i)=>{
+    const el=document.createElement('div'); el.className='soap-block'; el.style.animationDelay=(i*0.08)+'s';
+    const txt=(soap[k]||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    el.innerHTML=`<div class="soap-lbl">${l}</div><div class="soap-body">${txt}</div>`;
+    out.appendChild(el);
+  });
+  if (soap.flags?.length) {
+    const el=document.createElement('div'); el.className='soap-block'; el.style.animationDelay='0.35s';
+    el.innerHTML=`<div class="soap-lbl" style="color:var(--amber)">Clinical Flags</div><div class="soap-body" style="background:var(--amber-l);border-color:#fde68a">${soap.flags.map(f=>`<p>${f}</p>`).join('')}</div>`;
+    out.appendChild(el);
+  }
+  const c=soap.confidence||80, cc=c>=85?'var(--accent)':c>=70?'var(--amber)':'var(--red)';
+  const badge=document.createElement('div');
+  badge.style.cssText=`margin-top:10px;padding:9px 13px;background:var(--accent-l);border-radius:5px;font-size:12.5px;color:${cc};display:flex;align-items:center;gap:8px;animation:viewIn 0.3s ease 0.4s both`;
+  badge.innerHTML=`<div class="ai-dot" style="background:${cc}"></div><strong>Confidence: ${c}%</strong> — Ready to save to Notion`;
+  out.appendChild(badge);
+  document.getElementById('saveBtn').disabled=false;
+  document.getElementById('syncBtn').disabled=false;
+}
+
+async function extractVitals() {
+  const raw=document.getElementById('rawNote').value.trim();
+  if (!raw) { toast('Enter notes first','e'); return; }
+  toast('Extracting vitals…','i');
+  try {
+    const r=await fetch('/api/extract-vitals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rawNote:raw,model:S.openaiModel||'gpt-4o'})});
+    const v=await r.json();
+    let html='<div class="soap-block"><div class="soap-lbl">Extracted Vitals</div><div class="soap-body">';
+    if(v.bp) html+=`<p><strong>Blood Pressure:</strong> ${v.bp}</p>`;
+    if(v.pulse) html+=`<p><strong>Pulse:</strong> ${v.pulse}</p>`;
+    if(v.temp) html+=`<p><strong>Temperature:</strong> ${v.temp}</p>`;
+    if(v.spo2) html+=`<p><strong>SpO₂:</strong> ${v.spo2}</p>`;
+    if(v.rr) html+=`<p><strong>Resp. Rate:</strong> ${v.rr}</p>`;
+    if(v.weight) html+=`<p><strong>Weight:</strong> ${v.weight}</p>`;
+    if(v.other) html+=`<p>${v.other}</p>`;
+    html+='</div></div>';
+    document.getElementById('aiOutput').innerHTML=html;
+    toast('Vitals extracted','s');
+  } catch(e) { toast('Error: '+e.message,'e'); }
+}
+
+async function saveToNotion() {
+  if (!S.currentSOAP) { toast('Generate a SOAP note first','e'); return; }
+  if (!S.notionToken) { toast('Add your Notion token in Settings','e'); navigate('settings',null); return; }
+  if (!S.notionPatientDb) { toast('Add your Notion database ID in Settings','e'); navigate('settings',null); return; }
+  const btn=document.getElementById('syncBtn'), saveBtn=document.getElementById('saveBtn');
+  btn.disabled=true; saveBtn.disabled=true; btn.classList.add('btn-spin'); btn.textContent='';
+  const ptName=document.getElementById('metaName').textContent||'Unknown';
+  const ntl=NTL[S.noteType]||'Ward Round Note';
+  const clinician=`${S.user?.title||'Dr.'} ${S.user?.lastName||S.user?.username||'—'}`;
+  try {
+    const r=await fetch('/api/save-notion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({soap:S.currentSOAP,noteType:S.noteType,patientName:ptName,clinician:clinician,ward:S.user?.ward||'—',notionToken:S.notionToken,notionPatientDb:S.notionPatientDb})});
+    if (!r.ok) { const d=await r.json(); throw new Error(d.message||`Notion ${r.status}`); }
+    btn.classList.remove('btn-spin'); btn.textContent='Saved to Notion'; btn.style.background='var(--accent2)';
+    document.getElementById('syncChip').className='status-chip live';
+    document.getElementById('syncLabel').textContent='Synced just now';
+    document.getElementById('dashSynced').textContent='Live';
+    document.getElementById('dashSyncSub').textContent='Last sync just now';
+    addActivity(`Synced to Notion — ${ntl} · ${ptName}`);
+    toast('Saved to Notion','s');
+  } catch(e) {
+    btn.classList.remove('btn-spin'); btn.textContent='Sync'; btn.disabled=false; saveBtn.disabled=false;
+    toast('Notion sync failed: '+e.message,'e',6000);
+  }
+}
+
+function openNewPatient() { document.getElementById('newPatientModal').classList.add('open'); }
+
+function createPatient() {
+  const first=v('npFirst'), last=v('npLast');
+  if (!first||!last) { toast('Patient name is required','e'); return; }
+  const name=`${first} ${last}`;
+  const obs=v('npObstetric')||'—', ward=v('npWard')||S.user?.ward||'—', status=document.getElementById('npStatus').value;
+  document.getElementById('metaName').textContent=name;
+  document.getElementById('metaObs').textContent=obs;
+  document.getElementById('metaStatus').textContent=status;
+  document.getElementById('metaWard').textContent=ward;
+  closeMod(null,'newPatientModal');
+  navigate('composer',document.querySelectorAll('.s-item')[1]);
+  toast(`Record created for ${name}`,'s');
+}
+
+function addActivity(msg) {
+  const feed=document.getElementById('activityFeed');
+  feed.querySelectorAll('.activity-item').forEach(el=>{ if(el.textContent.includes('Configure your API keys')) el.remove(); });
+  const el=document.createElement('div'); el.className='activity-item';
+  const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  el.innerHTML=`<div class="activity-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><div style="flex:1;font-size:13px"><strong>${msg}</strong></div><div style="font-size:11px;color:var(--text3)">${t}</div><span class="tag tg">Synced</span>`;
+  feed.insertBefore(el,feed.firstChild);
+}
+
+function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+
+function clearComposer() {
+  document.getElementById('rawNote').value='';
+  document.getElementById('aiOutput').innerHTML=`<div class="empty-panel"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><div style="font-weight:500;color:var(--text2)">AI Ready</div><div>Enter clinical notes and click<br><strong>Generate SOAP Note</strong></div></div>`;
+  document.getElementById('saveBtn').disabled=true; document.getElementById('syncBtn').disabled=true;
+  document.getElementById('syncBtn').textContent='Sync'; document.getElementById('syncBtn').style.background='';
+  S.currentSOAP=null;
+}
+
+function copyOutput() {
+  if (!S.currentSOAP) { toast('Nothing to copy yet','i'); return; }
+  const txt=`SUBJECTIVE\n${S.currentSOAP.subjective}\n\nOBJECTIVE\n${S.currentSOAP.objective}\n\nASSESSMENT\n${S.currentSOAP.assessment}\n\nPLAN\n${S.currentSOAP.plan}`;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copied to clipboard','s')).catch(()=>toast('Copy failed','e'));
+}
+
+function closeMod(e, id) {
+  if (!e || e.target===document.getElementById(id)) document.getElementById(id).classList.remove('open');
+}
+
+// Med Buddy chat functions
+let chatHistory = [];
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Add user message
+  addChatMessage('user', message);
+  input.value = '';
+
+  // Add to history
+  chatHistory.push({ role: 'user', content: message });
+
+  // Show typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'message ai';
+  typingDiv.id = 'typingIndicator';
+  typingDiv.innerHTML = `
+    <div class="message-avatar">🤖</div>
+    <div class="message-content">
+      <div class="message-header">Med Buddy</div>
+      <div class="message-text">
+        <div class="typing">
+          <div class="td"></div>
+          <div class="td"></div>
+          <div class="td"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('chatMessages').appendChild(typingDiv);
+  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+
+  // Send to API
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, history: chatHistory })
+  })
+  .then(r => r.json())
+  .then(data => {
+    // Remove typing indicator
+    const typingEl = document.getElementById('typingIndicator');
+    if (typingEl) typingEl.remove();
+
+    // Add AI response
+    addChatMessage('ai', data.reply);
+    chatHistory.push({ role: 'assistant', content: data.reply });
+  })
+  .catch(error => {
+    // Remove typing indicator
+    const typingEl = document.getElementById('typingIndicator');
+    if (typingEl) typingEl.remove();
+
+    addChatMessage('ai', 'Sorry, I encountered an error. Please try again.');
+    console.error('Chat error:', error);
+  });
+}
+
+function addChatMessage(type, text) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${type}`;
+  messageDiv.innerHTML = `
+    <div class="message-avatar">${type === 'ai' ? '🤖' : '👤'}</div>
+    <div class="message-content">
+      <div class="message-header">${type === 'ai' ? 'Med Buddy' : 'You'}</div>
+      <div class="message-text">${text.replace(/\n/g, '<br>')}</div>
+    </div>
+  `;
+  document.getElementById('chatMessages').appendChild(messageDiv);
+  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+}
+
+function handleChatKeyPress(event) {
+  if (event.key === 'Enter') {
+    sendChatMessage();
+  }
+}
+
+function toast(msg, type='i', dur=3200) {
+  const t=document.createElement('div'); t.className=`toast ${type}`;
+  const icons={s:'✓',e:'✕',i:'i'};
+  t.innerHTML=`<span style="font-weight:700;font-size:13px">${icons[type]||'i'}</span><span style="flex:1">${msg}</span>`;
+  document.getElementById('toastWrap').appendChild(t);
+  setTimeout(()=>{ t.style.animation='toastOut 0.28s ease forwards'; setTimeout(()=>t.remove(),280); }, dur);
+}
+
+// Floating Med Buddy Widget Functions
+function toggleMedBuddy() {
+  const widget = document.getElementById('medBuddyWidget');
+  widget.classList.toggle('open');
+  if (widget.classList.contains('open')) {
+    document.getElementById('widgetInput').focus();
+  }
+}
+
+function closeMedBuddy() {
+  document.getElementById('medBuddyWidget').classList.remove('open');
+}
+
+function sendWidgetMessage() {
+  const input = document.getElementById('widgetInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Add user message to widget
+  addWidgetBubble('user', message);
+  input.value = '';
+
+  // Add to chat history
+  chatHistory.push({ role: 'user', content: message });
+
+  // Show typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'bubble';
+  typingDiv.id = 'typingIndicatorWidget';
+  typingDiv.innerHTML = `
+    <div class="bubble-avatar">💚</div>
+    <div class="bubble-content">
+      <div class="bubble-typing">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('widgetMessages').appendChild(typingDiv);
+  document.getElementById('widgetMessages').scrollTop = document.getElementById('widgetMessages').scrollHeight;
+
+  // Send to API
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, history: chatHistory })
+  })
+  .then(r => r.json())
+  .then(data => {
+    // Remove typing indicator
+    const typingEl = document.getElementById('typingIndicatorWidget');
+    if (typingEl) typingEl.remove();
+
+    // Check for error in response
+    if (data.error) {
+      addWidgetBubble('ai', 'Error: ' + data.error);
+      console.error('API Error:', data.error);
+      return;
+    }
+
+    // Add AI response
+    if (data.reply) {
+      addWidgetBubble('ai', data.reply);
+      chatHistory.push({ role: 'assistant', content: data.reply });
+    } else {
+      addWidgetBubble('ai', 'No response received from the API.');
+    }
+  })
+  .catch(error => {
+    // Remove typing indicator
+    const typingEl = document.getElementById('typingIndicatorWidget');
+    if (typingEl) typingEl.remove();
+
+    addWidgetBubble('ai', 'Sorry, I encountered an error. Please try again.');
+    console.error('Chat error:', error);
+  });
+}
+
+function addWidgetBubble(type, text) {
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${type}`;
+  const icon = type === 'ai' ? '💚' : '👤';
+  bubble.innerHTML = `
+    <div class="bubble-avatar">${icon}</div>
+    <div class="bubble-content">
+      <div class="bubble-text">${text.replace(/\n/g, '<br>')}</div>
+    </div>
+  `;
+  document.getElementById('widgetMessages').appendChild(bubble);
+  document.getElementById('widgetMessages').scrollTop = document.getElementById('widgetMessages').scrollHeight;
+}
+
+function handleWidgetKeyPress(event) {
+  if (event.key === 'Enter') {
+    sendWidgetMessage();
+  }
+}
+
+(function init() {
+  const u = getCurrentUser();
+  if (u) { bootApp(u); }
+  document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') handleLogin(); });
+  document.getElementById('regPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') handleRegister(); });
+})();
+</script>
+<!-- ── FLOATING MED BUDDY WIDGET ── -->
+<button id="medBuddyButton" onclick="toggleMedBuddy()" title="Open Med Buddy">💚</button>
+<div id="medBuddyWidget">
+  <div class="widget-header">
+    <div class="widget-title">
+      <span>💚 Med Buddy</span>
+    </div>
+    <button class="widget-close" onclick="closeMedBuddy()">✕</button>
+  </div>
+  <div class="widget-messages" id="widgetMessages">
+    <div class="bubble">
+      <div class="bubble-avatar">💚</div>
+      <div class="bubble-content">
+        <div class="bubble-text">Hi! 👋 I'm Med Buddy, your AI assistant. Ask me anything about medical topics, clinical decisions, or patient care!</div>
+      </div>
+    </div>
+  </div>
+  <div class="widget-input-area">
+    <input type="text" class="widget-input" id="widgetInput" placeholder="Ask anything..." onkeypress="handleWidgetKeyPress(event)">
+    <button class="widget-send" onclick="sendWidgetMessage()">↑</button>
+  </div>
+</div>
+
+</body>
+</html>
